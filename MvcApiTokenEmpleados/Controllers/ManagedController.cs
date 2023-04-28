@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
 using MvcApiTokenEmpleados.Services;
+using System.Security.Claims;
 
 namespace MvcApiTokenEmpleados.Controllers
 {
@@ -30,8 +33,29 @@ namespace MvcApiTokenEmpleados.Controllers
             {
                 ViewData["MENSAJE"] = "BIENVENIDO AMIGO ! :) ESTAS EN MI APP";
                 HttpContext.Session.SetString("TOKEN", token);
+                ClaimsIdentity identity =
+                 new ClaimsIdentity
+                 (CookieAuthenticationDefaults.AuthenticationScheme,
+                 ClaimTypes.Name, ClaimTypes.Role);
+                identity.AddClaim(new Claim(ClaimTypes.Name, username));
+                identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, password));
+                ClaimsPrincipal userPrincipal = new ClaimsPrincipal(identity);
+                await HttpContext.SignInAsync
+                (CookieAuthenticationDefaults.AuthenticationScheme,
+                userPrincipal, new AuthenticationProperties
+                {
+                    ExpiresUtc = DateTime.UtcNow.AddMinutes(30)
+                });
+                return RedirectToAction("Index", "Home");
             }
             return View();
+        }
+        public async Task<IActionResult> LogOut()
+        {
+            await HttpContext.SignOutAsync
+                (CookieAuthenticationDefaults.AuthenticationScheme);
+            HttpContext.Session.Remove("TOKEN");
+            return RedirectToAction("Index", "Home");
         }
     }
 }
